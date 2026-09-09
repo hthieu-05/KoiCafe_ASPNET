@@ -1,49 +1,38 @@
 @model List<KoiCafe.Models.HoaDonModel>
 @{
-    Layout = null; 
+    ViewData["Title"] = "Lịch Sử Đơn Hàng";
 }
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Lịch Sử Đơn Hàng - Koi Cafe</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-light p-4">
-    <div class="container bg-white p-4 shadow-sm rounded">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="fw-bold text-dark m-0"><i class="fas fa-file-invoice-dollar text-warning me-2"></i> LỊCH SỬ ĐƠN HÀNG</h4>
-            <a href="/Dashboard" class="btn btn-secondary fw-bold">Về Tổng Quan</a>
-        </div>
 
-        <table class="table table-hover align-middle text-center">
-            <thead class="table-dark">
-                <tr><th>Mã HĐ</th><th>Tên Bàn</th><th>Thu Ngân</th><th>Ngày Giờ</th><th>Tổng Tiền</th><th>Trạng Thái</th></tr>
-            </thead>
-            <tbody>
-                @foreach (var hd in Model)
-                {
-                    <tr class="@(hd.TrangThai == "Đã hủy" ? "table-danger" : "")">
-                        <td class="fw-bold text-primary">#@hd.MaHD</td>
-                        <td class="fw-bold">@hd.TenBan</td>
-                        <td>@hd.TenNV</td>
-                        <td>@hd.NgayLap.ToString("dd/MM/yyyy HH:mm")</td>
-                        <td class="fw-bold text-danger">@hd.TongTien.ToString("N0") đ</td>
-                        <td>
-                            @if(hd.TrangThai == "Đã thanh toán") {
-                                <span class="badge bg-success">Thành công</span>
-                            } else if(hd.TrangThai == "Đã hủy") {
-                                <span class="badge bg-danger">Đã hủy</span><br/>
-                                <small class="text-danger fw-bold">@hd.LyDoHuy</small>
-                            } else {
-                                <span class="badge bg-warning text-dark">Chưa thanh toán</span>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</body>
-</html>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold text-dark m-0"><i class="fas fa-file-invoice-dollar text-warning me-2"></i> LỊCH SỬ ĐƠN HÀNG</h4>
+</div>
+
+<div class="bg-white p-4 shadow-sm rounded">
+    <table class="table table-hover align-middle text-center">
+        <thead class="table-dark">
+            <tr><th>Mã HĐ</th><th>Tên Bàn</th><th>Thu Ngân</th><th>Ngày Giờ</th><th>Tổng Tiền</th><th>Trạng Thái</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var hd in Model)
+            {
+                <tr class="@(hd.TrangThai == "Đã hủy" ? "table-danger" : "")">
+                    <td class="fw-bold text-primary">#@hd.MaHD</td>
+                    <td class="fw-bold">@hd.TenBan</td>
+                    <td>@hd.TenNV</td>
+                    <td>@hd.NgayLap.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="fw-bold text-danger">@hd.TongTien.ToString("N0") đ</td>
+                    <td>
+                        @if(hd.TrangThai == "Đã thanh toán") {
+                            <span class="badge bg-success">Thành công</span>
+                        } else if(hd.TrangThai == "Đã hủy") {
+                            <span class="badge bg-danger">Đã hủy</span><br/>
+                            <small class="text-danger fw-bold">@hd.LyDoHuy</small>
+                        } else {
+                            <span class="badge bg-warning text-dark">Chưa thanh toán</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
