@@ -1,0 +1,16 @@
+﻿@model KoiCafe.Models.ErrorViewModel
+@{
+    ViewData["Title"] = "Lỗi hệ thống";
+}
+
+<div class="container mt-5 text-center">
+    <h1 class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> Đã xảy ra lỗi.</h1>
+    <h4 class="text-secondary mt-3">Hệ thống đang gặp sự cố khi xử lý yêu cầu của bạn.</h4>
+
+    @if (Model != null && Model.ShowRequestId)
+    {
+        <p class="mt-4 text-muted">
+            <strong>Mã theo dõi (Request ID):</strong> <code>@Model.RequestId</code>
+        </p>
+    }
+</div>
