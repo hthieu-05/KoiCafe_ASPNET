@@ -1,11 +1,7 @@
 @model List<Dictionary<string, object>>
-@{
-    // Khai báo Tiêu đề trang, thẻ Layout chung sẽ tự động nhận giá trị này
-    ViewData["Title"] = "Quản Lý Thực Đơn";
-}
+@{ ViewData["Title"] = "Quản Lý Thực Đơn"; }
 
 <style>
-    /* Chỉ giữ lại CSS riêng cho các bảng của trang này */
     .table-card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 </style>
 
@@ -16,14 +12,8 @@
     </button>
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success fw-bold text-center shadow-sm">@TempData["Success"]</div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger fw-bold text-center shadow-sm">@TempData["Error"]</div>
-}
+@if (TempData["Success"] != null) { <div class="alert alert-success fw-bold text-center shadow-sm">@TempData["Success"]</div> }
+@if (TempData["Error"] != null) { <div class="alert alert-danger fw-bold text-center shadow-sm">@TempData["Error"]</div> }
 
 <div class="table-card">
     <table class="table table-hover align-middle text-center">
@@ -42,18 +32,17 @@
                         }
                     </td>
                     <td class="fw-bold text-dark">@sp["TenSP"]</td>
-                    <!-- ĐÃ SỬA: Lấy TenDM từ bảng DanhMuc thay vì LoaiSP -->
                     <td><span class="badge bg-secondary">@sp["TenDM"]</span></td>
                     <td class="fw-bold text-danger">@Convert.ToDecimal(sp["DonGia"]).ToString("N0") đ</td>
                     <td>
-                        @if(Convert.ToBoolean(sp["TrangThai"])) {
-                            <span class="badge bg-success">Đang bán</span>
-                        } else {
-                            <span class="badge bg-danger">Ngừng bán</span>
-                        }
+                        @if(Convert.ToBoolean(sp["TrangThai"])) { <span class="badge bg-success">Đang bán</span> } 
+                        else { <span class="badge bg-danger">Ngừng bán</span> }
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="openEditModal(@sp["MaSP"])"><i class="fas fa-edit"></i></button>
+                        <form action="/Menu/Delete/@sp["MaSP"]" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa món này?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </form>
                     </td>
                 </tr>
             }
@@ -71,41 +60,83 @@
             </div>
             <div class="modal-body">
                 <form action="/Menu/Create" method="POST">
-                    <div class="mb-3">
-                        <label class="fw-bold small">Tên sản phẩm</label>
-                        <input type="text" class="form-control" name="TenSP" required>
-                    </div>
-                    
-                    <!-- ĐÃ SỬA: Lấy danh mục tự động từ Database -->
+                    <div class="mb-3"><label class="fw-bold small">Tên sản phẩm</label><input type="text" class="form-control" name="TenSP" required></div>
                     <div class="mb-3">
                         <label class="fw-bold small">Danh mục sản phẩm</label>
                         <select class="form-select" name="MaDM" required>
                             <option value="">-- Chọn danh mục --</option>
-                            @if(ViewBag.Categories != null)
-                            {
-                                foreach (var dm in ViewBag.Categories)
-                                {
-                                    <option value="@dm["MaDM"]">@dm["TenDM"]</option>
-                                }
-                            }
+                            @if(ViewBag.Categories != null) { foreach (var dm in ViewBag.Categories) { <option value="@dm["MaDM"]">@dm["TenDM"]</option> } }
                         </select>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="fw-bold small">Giá bán (VNĐ)</label>
-                        <input type="number" class="form-control" name="DonGia" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="fw-bold small">Link Ảnh (URL)</label>
-                        <input type="text" class="form-control" name="HinhAnh" placeholder="Ví dụ: https://link-anh.com/cf.jpg">
-                    </div>
-                    <div class="mb-3">
-                        <label class="fw-bold small">Mô tả</label>
-                        <textarea class="form-control" name="MoTa" rows="2"></textarea>
-                    </div>
+                    <div class="mb-3"><label class="fw-bold small">Giá bán (VNĐ)</label><input type="number" class="form-control" name="DonGia" required></div>
+                    <div class="mb-3"><label class="fw-bold small">Link Ảnh (URL)</label><input type="text" class="form-control" name="HinhAnh"></div>
+                    <!-- Đã xóa ô Mô tả -->
                     <button type="submit" class="btn btn-success w-100 fw-bold">TẠO MÓN</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Modal Sửa Món Ăn -->
+<div class="modal fade" id="editProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">Cập Nhật Món Ăn</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="/Menu/Edit" method="POST">
+                    <input type="hidden" name="MaSP" id="editMaSP">
+                    <div class="mb-3"><label class="fw-bold small">Tên sản phẩm</label><input type="text" class="form-control" name="TenSP" id="editTenSP" required></div>
+                    <div class="mb-3">
+                        <label class="fw-bold small">Danh mục sản phẩm</label>
+                        <select class="form-select" name="MaDM" id="editMaDM" required>
+                            @if(ViewBag.Categories != null) { foreach (var dm in ViewBag.Categories) { <option value="@dm["MaDM"]">@dm["TenDM"]</option> } }
+                        </select>
+                    </div>
+                    <div class="mb-3"><label class="fw-bold small">Giá bán (VNĐ)</label><input type="number" class="form-control" name="DonGia" id="editDonGia" required></div>
+                    <div class="mb-3">
+                        <label class="fw-bold small">Trạng thái</label>
+                        <select class="form-select" name="TrangThai" id="editTrangThai">
+                            <option value="true">Đang bán</option>
+                            <option value="false">Ngừng bán</option>
+                        </select>
+                    </div>
+                    <div class="mb-3"><label class="fw-bold small">Link Ảnh (URL)</label><input type="text" class="form-control" name="HinhAnh" id="editHinhAnh"></div>
+                    <!-- Đã xóa ô Mô tả -->
+                    <button type="submit" class="btn btn-primary w-100 fw-bold">LƯU CẬP NHẬT</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openEditModal(maSP) {
+        fetch('/Menu/GetProduct/' + maSP)
+            .then(response => {
+                if (!response.ok) throw new Error("Lỗi kết nối");
+                return response.json();
+            })
+            .then(res => {
+                if(res.success) {
+                    document.getElementById('editMaSP').value = res.data.maSP;
+                    document.getElementById('editTenSP').value = res.data.tenSP;
+                    document.getElementById('editMaDM').value = res.data.maDM;
+                    document.getElementById('editDonGia').value = res.data.donGia;
+                    document.getElementById('editHinhAnh').value = res.data.hinhAnh;
+                    document.getElementById('editTrangThai').value = res.data.trangThai ? 'true' : 'false';
+                    
+                    var myModal = new bootstrap.Modal(document.getElementById('editProductModal'));
+                    myModal.show();
+                } else {
+                    alert("Lỗi: " + res.message);
+                }
+            })
+            .catch(error => {
+                alert("Lỗi hệ thống: " + error.message);
+            });
+    }
+</script>
