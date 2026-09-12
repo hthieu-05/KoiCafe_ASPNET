@@ -1,0 +1,117 @@
+@model List<KoiCafe.Models.HoaDonModel>
+@{ ViewData["Title"] = "Lịch Sử Đơn Hàng"; }
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold text-dark m-0"><i class="fas fa-file-invoice-dollar text-warning me-2"></i> LỊCH SỬ ĐƠN HÀNG</h4>
+</div>
+
+<div class="bg-white p-4 shadow-sm rounded">
+    <table class="table table-hover align-middle text-center">
+        <thead class="table-dark">
+            <tr><th>Mã HĐ</th><th>Tên Bàn</th><th>Thu Ngân</th><th>Ngày Giờ</th><th>Tổng Tiền</th><th>Trạng Thái</th><th>Thao Tác</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var hd in Model)
+            {
+                <tr class="@(hd.TrangThai == "Đã hủy" ? "table-danger" : "")">
+                    <td class="fw-bold text-primary">#@hd.MaHD</td>
+                    <td class="fw-bold">@hd.TenBan</td>
+                    <td>@hd.TenNV</td>
+                    <td>@hd.NgayLap.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="fw-bold text-danger">@hd.TongTien.ToString("N0") đ</td>
+                    <td>
+                        @if(hd.TrangThai == "Đã thanh toán") {
+                            <span class="badge bg-success">Thành công</span>
+                        } else if(hd.TrangThai == "Đã hủy") {
+                            <span class="badge bg-danger">Đã hủy</span><br/>
+                            <small class="text-danger fw-bold">@hd.LyDoHuy</small>
+                        } else {
+                            <span class="badge bg-warning text-dark">Chưa thanh toán</span>
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info fw-bold" onclick="viewDetails(@hd.MaHD, '@hd.TenBan', '@hd.TrangThai')">
+                            <i class="fas fa-eye"></i> Chi tiết
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Chi Tiết Hóa Đơn -->
+<div class="modal fade" id="orderDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-receipt me-2"></i> CHI TIẾT HÓA ĐƠN <span id="modalMaHD" class="text-warning"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row mb-3 border-bottom pb-2">
+                    <div class="col-6"><strong>Bàn phục vụ:</strong> <span id="modalTenBan" class="text-primary"></span></div>
+                    <div class="col-6 text-end"><strong>Trạng thái:</strong> <span id="modalTrangThai"></span></div>
+                </div>
+                <table class="table table-bordered text-center align-middle">
+                    <thead class="table-light">
+                        <tr><th>Tên Món</th><th>Đơn Giá</th><th>Số Lượng</th><th>Thành Tiền</th></tr>
+                    </thead>
+                    <tbody id="detailTableBody">
+                        <!-- Dữ liệu món ăn sẽ được đổ vào đây qua JavaScript -->
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="3" class="text-end text-uppercase fs-5">Tổng Cộng:</th>
+                            <th class="text-danger fs-5" id="modalTongTien">0 đ</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function viewDetails(maHD, tenBan, trangThai) {
+        // Hiển thị thông tin cơ bản lên Modal
+        document.getElementById('modalMaHD').innerText = "#" + maHD;
+        document.getElementById('modalTenBan').innerText = tenBan;
+        document.getElementById('modalTrangThai').innerHTML = `<span class="badge ${trangThai == 'Đã hủy' ? 'bg-danger' : 'bg-success'}">${trangThai}</span>`;
+        
+        // Gọi API lấy chi tiết món ăn
+        fetch('/Orders/GetOrderDetails/' + maHD)
+            .then(res => res.json())
+            .then(res => {
+                if(res.success) {
+                    let html = '';
+                    let total = 0;
+                    
+                    if(res.data.length === 0) {
+                        html = '<tr><td colspan="4" class="text-muted py-3">Không có món ăn nào trong hóa đơn này.</td></tr>';
+                    } else {
+                        res.data.forEach(item => {
+                            total += item.thanhTien;
+                            html += `
+                                <tr>
+                                    <td class="fw-bold text-start pl-3">${item.tenSP}</td>
+                                    <td>${item.donGia.toLocaleString('vi-VN')} đ</td>
+                                    <td class="fw-bold">${item.soLuong}</td>
+                                    <td class="fw-bold text-primary">${item.thanhTien.toLocaleString('vi-VN')} đ</td>
+                                </tr>
+                            `;
+                        });
+                    }
+                    
+                    document.getElementById('detailTableBody').innerHTML = html;
+                    document.getElementById('modalTongTien').innerText = total.toLocaleString('vi-VN') + " đ";
+                    
+                    // Mở Modal
+                    new bootstrap.Modal(document.getElementById('orderDetailModal')).show();
+                } else {
+                    alert("Lỗi tải chi tiết: " + res.message);
+                }
+            })
+            .catch(err => alert("Lỗi hệ thống: " + err));
+    }
+</script>

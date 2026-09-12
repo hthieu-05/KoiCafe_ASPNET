@@ -1,0 +1,170 @@
+@model KoiCafe.Models.PosViewModel
+@{
+    Layout = null; 
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>POS - Máy Bán Hàng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5; height: 100vh; overflow: hidden; }
+        .pos-navbar { background: #212529; height: 60px; }
+        .product-card { cursor: pointer; transition: 0.1s; border: none; border-radius: 12px; }
+        .product-card:active { transform: scale(0.95); background-color: #f8f9fa; }
+        .cart-container { background: white; height: calc(100vh - 60px); display: flex; flex-direction: column; }
+        .cart-items { flex-grow: 1; overflow-y: auto; padding: 15px; }
+        .products-container { height: calc(100vh - 60px); overflow-y: auto; padding: 20px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark pos-navbar py-0">
+        <div class="container-fluid">
+            <a class="btn btn-outline-light btn-sm fw-bold" href="/Dashboard"><i class="fas fa-arrow-left"></i> Về Dashboard</a>
+            <span class="navbar-text text-warning fw-bold mx-auto fs-5"><i class="fas fa-desktop"></i> KOI CAFE POS</span>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- CỘT 1: CHỌN MÓN -->
+            <div class="col-md-7 col-lg-8 products-container">
+                <div class="row g-3">
+                    @foreach (var sp in Model.Products)
+                    {
+                        <div class="col-xl-3 col-lg-4 col-sm-6">
+                            <div class="card product-card h-100 text-center p-3 shadow-sm" onclick="addToCart(@sp.MaSP, '@sp.TenSP', @sp.DonGia)">
+                                <div class="display-4 mb-2">☕</div>
+                                <h6 class="fw-bold mb-1 text-dark text-truncate">@sp.TenSP</h6>
+                                <div class="text-danger fw-bold">@sp.DonGia.ToString("N0") đ</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- CỘT 2: GIỎ HÀNG -->
+            <div class="col-md-5 col-lg-4 cart-container border-start">
+                <div class="p-3 bg-light border-bottom">
+                    <select id="maBan" class="form-select form-select-lg fw-bold shadow-sm text-primary" onchange="loadTableOrder()">
+                        <option value="">-- CHỌN BÀN GỌI MÓN --</option>
+                        @foreach (var b in Model.Tables)
+                        {
+                            <option value="@b.MaBan">
+                                @(string.IsNullOrEmpty(b.KhuVuc) ? "" : b.KhuVuc + " - ") Bàn @b.TenBan @(b.TrangThai != "Trong" ? "(Đang phục vụ)" : "")
+                            </option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="cart-items bg-white" id="cartItems">
+                    <div class="text-center text-muted mt-5"><i class="fas fa-receipt fs-1 mb-3"></i><br>Chưa có món nào</div>
+                </div>
+
+                <div class="p-3 bg-light border-top shadow-lg">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="fs-5 fw-bold text-dark">TỔNG CỘNG:</span>
+                        <span class="fs-2 fw-bold text-danger" id="cartTotal">0 đ</span>
+                    </div>
+                    
+                    <div class="row g-2">
+                        <div class="col-3">
+                            <button class="btn btn-outline-danger w-100 fw-bold py-3 shadow-sm" onclick="promptCancelOrder()"><i class="fas fa-trash-alt"></i> HỦY</button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-warning w-100 fw-bold py-3 shadow-sm text-dark" onclick="processOrder('save')"><i class="fas fa-save"></i> LƯU</button>
+                        </div>
+                        <div class="col-5">
+                            <button class="btn btn-success w-100 fw-bold py-3 shadow-sm" onclick="processOrder('pay')"><i class="fas fa-check-circle"></i> THU TIỀN</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT ĐÃ ĐƯỢC CHUYỂN ĐỔI CALL API C# -->
+    <script>
+        let cart = [];
+
+        function loadTableOrder() {
+            const maBan = document.getElementById('maBan').value;
+            if(!maBan) { cart = []; renderCart(); return; }
+
+            // Gọi hàm C#
+            fetch('/Pos/GetTableOrder/' + maBan)
+                .then(res => res.json())
+                .then(data => {
+                    cart = data.success && data.cart.length > 0 ? data.cart : [];
+                    renderCart();
+                });
+        }
+
+        function addToCart(maSP, tenSP, donGia) {
+            let item = cart.find(i => i.maSP == maSP);
+            if(item) item.soLuong++; else cart.push({maSP, tenSP, donGia, soLuong: 1});
+            renderCart();
+        }
+
+        function changeQty(index, delta) {
+            cart[index].soLuong += delta;
+            if(cart[index].soLuong <= 0) cart.splice(index, 1);
+            renderCart();
+        }
+
+        function renderCart() {
+            let html = ''; let total = 0;
+            if(cart.length === 0) {
+                html = '<div class="text-center text-muted mt-5"><i class="fas fa-receipt fs-1 mb-3"></i><br>Chưa có món nào</div>';
+            } else {
+                cart.forEach((item, i) => {
+                    total += item.donGia * item.soLuong;
+                    html += `
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded bg-white shadow-sm">
+                        <div style="flex: 1;"><div class="fw-bold">${item.tenSP}</div><div class="text-danger small fw-bold">${item.donGia.toLocaleString('vi-VN')} đ</div></div>
+                        <div class="d-flex align-items-center">
+                            <button class="btn btn-sm btn-outline-secondary px-2 fw-bold" onclick="changeQty(${i}, -1)">-</button>
+                            <span class="mx-2 fw-bold fs-5">${item.soLuong}</span>
+                            <button class="btn btn-sm btn-outline-secondary px-2 fw-bold" onclick="changeQty(${i}, 1)">+</button>
+                        </div>
+                    </div>`;
+                });
+            }
+            document.getElementById('cartItems').innerHTML = html;
+            document.getElementById('cartTotal').innerText = total.toLocaleString('vi-VN') + ' đ';
+        }
+
+        function processOrder(action) {
+            let maBan = document.getElementById('maBan').value;
+            if(!maBan) return alert('Vui lòng chọn Bàn trước!');
+            if(cart.length === 0 && action !== 'cancel') return alert('Chưa có món nào!');
+            if(action === 'pay' && !confirm('Xác nhận thu tiền?')) return;
+
+            // Truyền lên C# PosController/ProcessOrder
+            fetch('/Pos/ProcessOrder', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ maBan: parseInt(maBan), action: action, cart: cart })
+            }).then(r => r.json()).then(res => {
+                if(res.success) { alert(res.message); location.reload(); } 
+                else alert('Lỗi: ' + res.message);
+            });
+        }
+
+        function promptCancelOrder() {
+            let maBan = document.getElementById('maBan').value;
+            if(!maBan) return alert('Vui lòng chọn Bàn trước!');
+            let lyDo = prompt("Nhập lý do hủy hóa đơn (Bắt buộc):");
+            if(lyDo) {
+                fetch('/Pos/ProcessOrder', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ maBan: parseInt(maBan), action: 'cancel', lyDoHuy: lyDo, cart: [] })
+                }).then(r => r.json()).then(res => {
+                    if(res.success) { alert(res.message); location.reload(); }
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+@model List<KoiCafe.Models.HoaDonModel>
+@{ ViewData["Title"] = "Thanh Toán Hóa Đơn"; }
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold text-dark m-0"><i class="fas fa-cash-register text-success me-2"></i> THU NGÂN & THANH TOÁN</h4>
+</div>
+
+<div class="row g-4">
+    @if(Model.Count == 0)
+    {
+        <div class="col-12 text-center text-muted mt-5">
+            <i class="fas fa-check-circle fa-4x mb-3 text-success opacity-50"></i>
+            <h5>Tất cả các bàn đều đã thanh toán!</h5>
+        </div>
+    }
+    @foreach (var hd in Model)
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm border-0 border-top border-success border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="fw-bold text-primary mb-0">@hd.TenBan</h5>
+                        <span class="badge bg-warning text-dark">#@hd.MaHD</span>
+                    </div>
+                    <p class="text-muted small mb-3"><i class="fas fa-clock me-1"></i> @hd.NgayLap.ToString("HH:mm - dd/MM/yyyy")</p>
+                    <h3 class="fw-bold text-danger text-end">@hd.TongTien.ToString("N0") đ</h3>
+                    <hr>
+                    <button class="btn btn-success w-100 fw-bold" onclick="openCheckoutModal(@hd.MaHD, @hd.MaBan, '@hd.TenBan', @hd.TongTien)">
+                        <i class="fas fa-file-invoice-dollar me-1"></i> CHỐT THANH TOÁN
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal Chốt Hóa Đơn -->
+<div class="modal fade" id="checkoutModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold">Thanh Toán Bàn <span id="ckTenBan"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="ckMaHD">
+                <input type="hidden" id="ckMaBan">
+                <input type="hidden" id="ckTongGoc">
+
+                <div class="d-flex justify-content-between mb-3 fs-5">
+                    <span class="fw-bold text-secondary">Tổng hóa đơn:</span>
+                    <span class="fw-bold text-dark" id="displayGoc">0 đ</span>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="fw-bold text-primary mb-1">Nhập Số Tiền Khuyến Mãi (VNĐ)</label>
+                    <input type="number" class="form-control form-control-lg border-primary" id="ckKhuyenMai" value="0" min="0" oninput="calculateTotal()">
+                </div>
+
+                <div class="d-flex justify-content-between mb-4 border-top pt-3">
+                    <span class="fw-bold fs-4">KHÁCH CẦN TRẢ:</span>
+                    <span class="fw-bold fs-3 text-danger" id="displayCuoi">0 đ</span>
+                </div>
+
+                <button type="button" class="btn btn-success btn-lg w-100 fw-bold shadow" onclick="submitCheckout()">
+                    <i class="fas fa-check-circle"></i> XÁC NHẬN ĐÃ THU TIỀN
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openCheckoutModal(maHD, maBan, tenBan, tongTien) {
+        document.getElementById('ckMaHD').value = maHD;
+        document.getElementById('ckMaBan').value = maBan;
+        document.getElementById('ckTenBan').innerText = tenBan;
+        document.getElementById('ckTongGoc').value = tongTien;
+        document.getElementById('ckKhuyenMai').value = 0;
+        
+        document.getElementById('displayGoc').innerText = tongTien.toLocaleString('vi-VN') + " đ";
+        calculateTotal(); // Tính toán lần đầu
+        
+        new bootstrap.Modal(document.getElementById('checkoutModal')).show();
+    }
+
+    function calculateTotal() {
+        let goc = parseFloat(document.getElementById('ckTongGoc').value) || 0;
+        let km = parseFloat(document.getElementById('ckKhuyenMai').value) || 0;
+        let cuoi = goc - km;
+        if(cuoi < 0) cuoi = 0;
+        document.getElementById('displayCuoi').innerText = cuoi.toLocaleString('vi-VN') + " đ";
+    }
+
+    function submitCheckout() {
+        if(!confirm("Chốt hóa đơn này? Thao tác sẽ không thể hoàn tác!")) return;
+
+        let payload = {
+            MaHD: parseInt(document.getElementById('ckMaHD').value),
+            MaBan: parseInt(document.getElementById('ckMaBan').value),
+            SoTienKhuyenMai: parseFloat(document.getElementById('ckKhuyenMai').value) || 0,
+            HanhDong: "ThanhToan"
+        };
+
+        fetch('/Invoice/ProcessInvoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if(res.success) {
+                alert("✅ " + res.message);
+                location.reload(); // Tải lại trang để mất hóa đơn đã chốt
+            } else {
+                alert("❌ Lỗi: " + res.message);
+            }
+        });
+    }
+</script>
