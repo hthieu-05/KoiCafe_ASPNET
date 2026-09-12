@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 
 namespace KoiCafe.Controllers
 {
-    [AdminAuth] // Chặn chỉ cho Admin truy cập
+    [AdminAuth] 
     public class OrdersController : Controller
     {
         private readonly string _conn;
@@ -19,7 +19,6 @@ namespace KoiCafe.Controllers
             using (SqlConnection conn = new SqlConnection(_conn))
             {
                 conn.Open();
-                // Kéo dữ liệu từ 3 bảng: HoaDon, Ban, NhanVien
                 string sql = @"SELECT hd.MaHD, b.TenBan, nv.TenNV, hd.NgayLap, hd.TongTien, hd.TrangThai, hd.LyDoHuy 
                                FROM HoaDon hd 
                                LEFT JOIN Ban b ON hd.MaBan = b.MaBan 
@@ -47,6 +46,46 @@ namespace KoiCafe.Controllers
                 }
             }
             return View(invoices);
+        }
+
+        // [GET] API: Lấy chi tiết các món ăn trong 1 hóa đơn
+        [HttpGet]
+        public IActionResult GetOrderDetails(int id)
+        {
+            var details = new List<ChiTietHoaDonModel>();
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_conn))
+                {
+                    conn.Open();
+                    string sql = @"SELECT sp.TenSP, ct.SoLuong, ct.DonGia 
+                                   FROM ChiTietHoaDon ct
+                                   INNER JOIN SanPham sp ON ct.MaSP = sp.MaSP
+                                   WHERE ct.MaHD = @MaHD";
+                                   
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@MaHD", id);
+                        using (SqlDataReader r = cmd.ExecuteReader())
+                        {
+                            while (r.Read())
+                            {
+                                details.Add(new ChiTietHoaDonModel
+                                {
+                                    TenSP = r["TenSP"].ToString(),
+                                    SoLuong = Convert.ToInt32(r["SoLuong"]),
+                                    DonGia = Convert.ToDecimal(r["DonGia"])
+                                });
+                            }
+                        }
+                    }
+                }
+                return Json(new { success = true, data = details });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
 }
