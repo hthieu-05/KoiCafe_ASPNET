@@ -5,6 +5,7 @@ using Microsoft.Data.SqlClient;
 
 namespace KoiCafe.Controllers
 {
+<<<<<<< HEAD
     public class InvoiceProcessRequest
     {
         public int MaHD { get; set; }
@@ -13,6 +14,8 @@ namespace KoiCafe.Controllers
         public string HanhDong { get; set; } // "ThanhToan", "Huy", "LuuTam"
         public string LyDoHuy { get; set; } 
     }
+=======
+>>>>>>> 20101f9e67daeb5eca14d71b03f410059b60f3b9
     [AdminAuth] 
     public class OrdersController : Controller
     {
