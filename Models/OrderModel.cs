@@ -9,6 +9,7 @@ namespace KoiCafe.Models
 >>>>>>> 20101f9e67daeb5eca14d71b03f410059b60f3b9
         public string TenBan { get; set; }
         public string TenNV { get; set; }
+        public int MaBan { get; set; }
         public DateTime NgayLap { get; set; }
         public decimal TongTien { get; set; }
         public string TrangThai { get; set; }
@@ -38,5 +39,13 @@ namespace KoiCafe.Models
 =======
         public decimal ThanhTien => SoLuong * DonGia; // Tự động tính thành tiền
 >>>>>>> 20101f9e67daeb5eca14d71b03f410059b60f3b9
+    }
+    public class InvoiceProcessRequest
+    {
+        public int MaHD { get; set; }
+        public int MaBan { get; set; }
+        public decimal SoTienKhuyenMai { get; set; }
+        public string HanhDong { get; set; } // "ThanhToan", "Huy", "LuuTam"
+        public string LyDoHuy { get; set; } 
     }
 }

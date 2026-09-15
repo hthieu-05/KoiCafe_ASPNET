@@ -28,6 +28,9 @@
                     <button class="btn btn-success w-100 fw-bold" onclick="openCheckoutModal(@hd.MaHD, @hd.MaBan, '@hd.TenBan', @hd.TongTien)">
                         <i class="fas fa-file-invoice-dollar me-1"></i> CHỐT THANH TOÁN
                     </button>
+                    <button class="btn btn-outline-danger w-100 fw-bold" onclick="openCancelModal(@hd.MaHD, @hd.MaBan, '@hd.TenBan')">
+                        <i class="fas fa-ban me-1"></i> HỦY HÓA ĐƠN
+                    </button>
                 </div>
             </div>
         </div>
@@ -69,7 +72,79 @@
         </div>
     </div>
 </div>
+<!-- Modal Hủy Hóa Đơn -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold">Hủy Hóa Đơn Bàn <span id="cancelTenBan"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="cancelMaHD">
+                <input type="hidden" id="cancelMaBan">
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Thao tác này sẽ hủy bỏ hóa đơn, giải phóng bàn và không thể hoàn tác!
+                </div>
 
+                <div class="mb-4">
+                    <label class="fw-bold text-danger mb-1">Lý do hủy (Bắt buộc nhập)</label>
+                    <textarea class="form-control border-danger" id="cancelLyDo" rows="3" placeholder="Ví dụ: Khách bỏ đi, Đặt nhầm bàn..." required></textarea>
+                </div>
+
+                <button type="button" class="btn btn-danger btn-lg w-100 fw-bold shadow" onclick="submitCancel()">
+                    <i class="fas fa-trash-alt"></i> XÁC NHẬN HỦY
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ... (Giữ nguyên các function cũ của Checkout) ...
+
+    function openCancelModal(maHD, maBan, tenBan) {
+        document.getElementById('cancelMaHD').value = maHD;
+        document.getElementById('cancelMaBan').value = maBan;
+        document.getElementById('cancelTenBan').innerText = tenBan;
+        document.getElementById('cancelLyDo').value = ""; // Xóa trắng lý do cũ
+        
+        new bootstrap.Modal(document.getElementById('cancelModal')).show();
+    }
+
+    function submitCancel() {
+        let lyDo = document.getElementById('cancelLyDo').value.trim();
+        if(lyDo === "") {
+            alert("Vui lòng nhập lý do hủy để lưu vết!");
+            return;
+        }
+
+        if(!confirm("Bạn có chắc chắn muốn HỦY hóa đơn này?")) return;
+
+        let payload = {
+            MaHD: parseInt(document.getElementById('cancelMaHD').value),
+            MaBan: parseInt(document.getElementById('cancelMaBan').value),
+            HanhDong: "Huy",
+            LyDoHuy: lyDo
+        };
+
+        fetch('/Invoice/ProcessInvoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if(res.success) {
+                alert("✅ Đã hủy hóa đơn thành công!");
+                location.reload(); 
+            } else {
+                alert("❌ Lỗi: " + res.message);
+            }
+        });
+    }
+</script>
 <script>
     function openCheckoutModal(maHD, maBan, tenBan, tongTien) {
         document.getElementById('ckMaHD').value = maHD;

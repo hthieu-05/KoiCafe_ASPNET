@@ -8,6 +8,7 @@
 <div class="bg-white p-4 shadow-sm rounded">
     <table class="table table-hover align-middle text-center">
         <thead class="table-dark">
+            <!-- ĐÃ THÊM CỘT THAO TÁC Ở ĐÂY -->
             <tr><th>Mã HĐ</th><th>Tên Bàn</th><th>Thu Ngân</th><th>Ngày Giờ</th><th>Tổng Tiền</th><th>Trạng Thái</th><th>Thao Tác</th></tr>
         </thead>
         <tbody>
@@ -30,6 +31,7 @@
                         }
                     </td>
                     <td>
+                        <!-- ĐÃ THÊM NÚT XEM CHI TIẾT Ở ĐÂY -->
                         <button class="btn btn-sm btn-outline-info fw-bold" onclick="viewDetails(@hd.MaHD, '@hd.TenBan', '@hd.TrangThai')">
                             <i class="fas fa-eye"></i> Chi tiết
                         </button>
@@ -40,7 +42,7 @@
     </table>
 </div>
 
-<!-- Modal Chi Tiết Hóa Đơn -->
+<!-- Modal Chi Tiết Hóa Đơn (Cửa sổ bật lên) -->
 <div class="modal fade" id="orderDetailModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -72,14 +74,13 @@
     </div>
 </div>
 
+<!-- Script xử lý sự kiện khi bấm nút Chi tiết -->
 <script>
     function viewDetails(maHD, tenBan, trangThai) {
-        // Hiển thị thông tin cơ bản lên Modal
         document.getElementById('modalMaHD').innerText = "#" + maHD;
         document.getElementById('modalTenBan').innerText = tenBan;
         document.getElementById('modalTrangThai').innerHTML = `<span class="badge ${trangThai == 'Đã hủy' ? 'bg-danger' : 'bg-success'}">${trangThai}</span>`;
         
-        // Gọi API lấy chi tiết món ăn
         fetch('/Orders/GetOrderDetails/' + maHD)
             .then(res => res.json())
             .then(res => {
@@ -94,7 +95,7 @@
                             total += item.thanhTien;
                             html += `
                                 <tr>
-                                    <td class="fw-bold text-start pl-3">${item.tenSP}</td>
+                                    <td class="fw-bold text-start ps-3">${item.tenSP}</td>
                                     <td>${item.donGia.toLocaleString('vi-VN')} đ</td>
                                     <td class="fw-bold">${item.soLuong}</td>
                                     <td class="fw-bold text-primary">${item.thanhTien.toLocaleString('vi-VN')} đ</td>
@@ -106,7 +107,6 @@
                     document.getElementById('detailTableBody').innerHTML = html;
                     document.getElementById('modalTongTien').innerText = total.toLocaleString('vi-VN') + " đ";
                     
-                    // Mở Modal
                     new bootstrap.Modal(document.getElementById('orderDetailModal')).show();
                 } else {
                     alert("Lỗi tải chi tiết: " + res.message);
