@@ -5,17 +5,6 @@ using Microsoft.Data.SqlClient;
 
 namespace KoiCafe.Controllers
 {
-<<<<<<< HEAD
-    public class InvoiceProcessRequest
-    {
-        public int MaHD { get; set; }
-        public int MaBan { get; set; }
-        public decimal SoTienKhuyenMai { get; set; }
-        public string HanhDong { get; set; } // "ThanhToan", "Huy", "LuuTam"
-        public string LyDoHuy { get; set; } 
-    }
-=======
->>>>>>> 20101f9e67daeb5eca14d71b03f410059b60f3b9
     [AdminAuth] 
     public class OrdersController : Controller
     {
@@ -59,7 +48,6 @@ namespace KoiCafe.Controllers
             return View(invoices);
         }
 
-        // [GET] API: Lấy chi tiết các món ăn trong 1 hóa đơn
         [HttpGet]
         public IActionResult GetOrderDetails(int id)
         {

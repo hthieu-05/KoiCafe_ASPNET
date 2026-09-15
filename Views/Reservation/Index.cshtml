@@ -1,0 +1,142 @@
+@model List<KoiCafe.Controllers.DatBanViewModel>
+@{ ViewData["Title"] = "Quản Lý Đặt Bàn"; }
+
+<h4 class="fw-bold text-dark mb-4"><i class="fas fa-calendar-check text-primary me-2"></i> DANH SÁCH KHÁCH ĐẶT BÀN</h4>
+
+<div class="bg-white p-4 shadow-sm rounded">
+    <table class="table table-hover align-middle text-center">
+        <thead class="table-dark">
+            <tr>
+                <th>Mã Đơn</th><th>Khách Hàng</th><th>SĐT</th><th>Số Người</th>
+                <th>Thời Gian Đến</th><th>Bàn Cấp</th><th>Trạng Thái</th><th>Thao Tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var db in Model)
+            {
+                <tr>
+                    <td class="fw-bold">#@db.MaDatBan</td>
+                    <td class="fw-bold text-primary">@db.TenKhach</td>
+                    <td>@db.SoDienThoai</td>
+                    <td><span class="badge bg-info text-dark fs-6">@db.SoNguoi người</span></td>
+                    <td>@db.ThoiGianDat.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="fw-bold text-danger">@(string.IsNullOrEmpty(db.DanhSachMaBan) ? "Chưa xếp" : db.DanhSachMaBan)</td>
+                    <td>
+                        @if(db.TrangThai == "Chờ xác nhận") { <span class="badge bg-secondary">Chờ duyệt</span> }
+                        else if(db.TrangThai == "Đã xác nhận") { <span class="badge bg-warning text-dark">Đã xếp bàn</span> }
+                        else if(db.TrangThai == "Đã đến") { <span class="badge bg-success">Đã đến</span> }
+                        else { <span class="badge bg-danger">Không đến</span> }
+                    </td>
+                    <td>
+                        @if(db.TrangThai == "Chờ xác nhận")
+                        {
+                            <!-- Mở Popup chọn bàn thay vì chạy tự động -->
+                            <button class="btn btn-sm btn-primary fw-bold" onclick="openAssignModal(@db.MaDatBan, '@db.TenKhach', @db.SoNguoi)">
+                                <i class="fas fa-list-check"></i> Chọn bàn
+                            </button>
+                        }
+                        else if (db.TrangThai == "Đã xác nhận")
+                        {
+                            <div class="d-flex justify-content-center gap-1">
+                                <!-- NÚT KHÁCH ĐÃ ĐẾN -->
+                                <form action="/Reservation/XacNhanKhachDen" method="post" class="d-inline">
+                                    <input type="hidden" name="maDatBan" value="@db.MaDatBan" />
+                                    <input type="hidden" name="hanhDong" value="DaDen" />
+                                    <button type="submit" class="btn btn-sm btn-success fw-bold">
+                                        <i class="fas fa-walking"></i> Đã đến
+                                    </button>
+                                </form>
+
+                                <!-- NÚT HỦY KHI KHÁCH QUÁ GIỜ -->
+                                <form action="/Reservation/XacNhanKhachDen" method="post" class="d-inline" onsubmit="return confirm('Khách đã quá giờ? Xác nhận hủy đơn và trả bàn về trạng thái TRỐNG?');">
+                                    <input type="hidden" name="maDatBan" value="@db.MaDatBan" />
+                                    <input type="hidden" name="hanhDong" value="KhongDen" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger fw-bold" title="Hủy do khách không tới">
+                                        <i class="fas fa-user-times"></i> Không đến
+                                    </button>
+                                </form>
+                            </div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- MODAL: DANH SÁCH BÀN CHO PHÉP TÍCH CHỌN -->
+<div class="modal fade" id="assignTableModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">Xếp bàn cho: <span id="assignTenKhach"></span> (<span id="assignSoNguoi"></span> người)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <input type="hidden" id="assignMaDatBan">
+                <p class="text-muted small mb-3"><i class="fas fa-info-circle"></i> Có thể chọn nhiều bàn để ghép cho đoàn đông người.</p>
+                
+                <div class="list-group">
+                    <!-- Duyệt toàn bộ danh sách bàn từ ViewBag -->
+                    @foreach (var ban in ViewBag.DanhSachBan)
+                    {
+                        string badgeColor = ban.TrangThai == "Trong" ? "bg-success" : (ban.TrangThai == "Đã đặt" ? "bg-warning text-dark" : "bg-danger");
+                        <label class="list-group-item d-flex justify-content-between align-items-center list-group-item-action cursor-pointer">
+                            <div>
+                                <input class="form-check-input me-2 table-checkbox" type="checkbox" value="@ban.MaBan">
+                                <span class="fw-bold fs-6">@ban.TenBan</span>
+                                <small class="text-muted ms-2">(Sức chứa: @ban.SucChua người)</small>
+                            </div>
+                            <span class="badge @badgeColor rounded-pill">@ban.TrangThai</span>
+                        </label>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary w-100 fw-bold shadow" onclick="submitAssign()">
+                    <i class="fas fa-check-circle me-1"></i> XÁC NHẬN XẾP BÀN
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Mở Popup và xóa các ô tích cũ
+    function openAssignModal(id, ten, soNguoi) {
+        document.getElementById('assignMaDatBan').value = id;
+        document.getElementById('assignTenKhach').innerText = ten;
+        document.getElementById('assignSoNguoi').innerText = soNguoi;
+        
+        // Bỏ tích tất cả checkbox mỗi khi mở lại modal
+        document.querySelectorAll('.table-checkbox').forEach(cb => cb.checked = false);
+        
+        new bootstrap.Modal(document.getElementById('assignTableModal')).show();
+    }
+
+    // Thu thập các bàn được tích và gửi lên Backend
+    function submitAssign() {
+        let id = document.getElementById('assignMaDatBan').value;
+        
+        // Lấy tất cả các ô Checkbox đang được tích (checked), gom mã bàn lại thành chuỗi "1,2,5"
+        let selectedTables = Array.from(document.querySelectorAll('.table-checkbox:checked'))
+                                  .map(cb => cb.value)
+                                  .join(',');
+
+        if(!selectedTables) {
+            alert("Vui lòng tích chọn ít nhất 1 bàn cho khách!");
+            return;
+        }
+
+        fetch(`/Reservation/DuyetDonThuCong?id=${id}&chuoiBan=${selectedTables}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(res => {
+            if(res.success) {
+                alert("✅ " + res.message);
+                location.reload();
+            } else {
+                alert("❌ Lỗi: " + res.message);
+            }
+        });
+    }
+</script>

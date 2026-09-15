@@ -8,7 +8,7 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
-
+builder.Services.AddHostedService<KoiCafe.Services.ReservationCleanupService>();
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

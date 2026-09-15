@@ -1,66 +1,161 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using System.Data;
+using System.Collections.Generic;
+using System;
 
 namespace KoiCafe.Controllers
 {
+    public class TableViewModel
+    {
+        public int MaBan { get; set; }
+        public string TenBan { get; set; }
+        public string KhuVuc { get; set; }
+        public int SucChua { get; set; }
+        public string TrangThai { get; set; }
+    }
+
     public class TablesController : Controller
     {
-        private readonly string _connectionString;
+        private readonly string _conn;
+        public TablesController(IConfiguration config) { _conn = config.GetConnectionString("DefaultConnection"); }
 
-        public TablesController(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
-        }
-
-        // Tương đương: app.get('/tables')
         [HttpGet]
         public IActionResult Index()
         {
-            var tables = new List<Dictionary<string, object>>();
-
-            using (SqlConnection conn = new SqlConnection(_connectionString))
+            var dsBan = new List<TableViewModel>();
+            using (SqlConnection conn = new SqlConnection(_conn))
             {
                 conn.Open();
-                using (SqlCommand cmd = new SqlCommand("SELECT * FROM Ban ORDER BY MaBan ASC", conn))
+                using (SqlCommand cmd = new SqlCommand("SELECT * FROM Ban ORDER BY KhuVuc, TenBan", conn))
+                using (SqlDataReader r = cmd.ExecuteReader())
                 {
-                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    while (r.Read())
                     {
-                        while (reader.Read())
+                        dsBan.Add(new TableViewModel
                         {
-                            var row = new Dictionary<string, object>();
-                            for (int i = 0; i < reader.FieldCount; i++)
-                            {
-                                row[reader.GetName(i)] = reader.GetValue(i);
-                            }
-                            tables.Add(row);
-                        }
+                            MaBan = Convert.ToInt32(r["MaBan"]),
+                            TenBan = r["TenBan"].ToString(),
+                            KhuVuc = r["KhuVuc"] != DBNull.Value ? r["KhuVuc"].ToString() : "Sảnh chính",
+                            SucChua = r["SucChua"] != DBNull.Value ? Convert.ToInt32(r["SucChua"]) : 4,
+                            TrangThai = r["TrangThai"].ToString()
+                        });
                     }
                 }
             }
-
-            // Trả về file giao diện Views/Tables/Index.cshtml
-            return View(tables);
+            return View(dsBan);
         }
 
-        // Tương đương: app.post('/tables/add')
         [HttpPost]
-        public IActionResult Add(string tenBan, string khuVuc, int sucChua)
+        public IActionResult AddTable(string tenBan, string khuVuc, int sucChua)
         {
-            using (SqlConnection conn = new SqlConnection(_connectionString))
+            using (SqlConnection conn = new SqlConnection(_conn))
             {
                 conn.Open();
-                string sql = "INSERT INTO Ban (TenBan, TrangThai, KhuVuc, SucChua) VALUES (@TenBan, N'Trong', @KhuVuc, @SucChua)";
+                string sql = "INSERT INTO Ban (TenBan, KhuVuc, SucChua, TrangThai) VALUES (@Ten, @KV, @SC, N'Trong')";
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@TenBan", tenBan);
-                    cmd.Parameters.AddWithValue("@KhuVuc", string.IsNullOrEmpty(khuVuc) ? (object)DBNull.Value : khuVuc);
-                    cmd.Parameters.AddWithValue("@SucChua", sucChua == 0 ? 4 : sucChua);
-                    
+                    cmd.Parameters.AddWithValue("@Ten", tenBan);
+                    cmd.Parameters.AddWithValue("@KV", khuVuc);
+                    cmd.Parameters.AddWithValue("@SC", sucChua);
                     cmd.ExecuteNonQuery();
                 }
             }
             return RedirectToAction("Index");
+        }
+
+        // --- CHỨC NĂNG SỬA BÀN MỚI THÊM ---
+        [HttpPost]
+        public IActionResult EditTable(int maBan, string tenBan, string khuVuc, int sucChua)
+        {
+            using (SqlConnection conn = new SqlConnection(_conn))
+            {
+                conn.Open();
+                string sql = "UPDATE Ban SET TenBan = @Ten, KhuVuc = @KV, SucChua = @SC WHERE MaBan = @MaBan";
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Ten", tenBan);
+                    cmd.Parameters.AddWithValue("@KV", khuVuc);
+                    cmd.Parameters.AddWithValue("@SC", sucChua);
+                    cmd.Parameters.AddWithValue("@MaBan", maBan);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        public IActionResult DeleteTable(int id)
+        {
+            using (SqlConnection conn = new SqlConnection(_conn))
+            {
+                conn.Open();
+                var tt = new SqlCommand($"SELECT TrangThai FROM Ban WHERE MaBan = {id}", conn).ExecuteScalar()?.ToString();
+                if (tt != "Trong") return Json(new { success = false, message = "Không thể xóa bàn đang có khách!" });
+
+                new SqlCommand($"DELETE FROM Ban WHERE MaBan = {id}", conn).ExecuteNonQuery();
+                return Json(new { success = true });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult MoveTable(int banCu, int banMoi)
+        {
+            using (SqlConnection conn = new SqlConnection(_conn))
+            {
+                conn.Open();
+                SqlTransaction trans = conn.BeginTransaction();
+                try
+                {
+                    string sqlMoveHD = "UPDATE HoaDon SET MaBan = @Moi WHERE MaBan = @Cu AND TrangThai = N'Chưa thanh toán'";
+                    using (SqlCommand cmd = new SqlCommand(sqlMoveHD, conn, trans))
+                    {
+                        cmd.Parameters.AddWithValue("@Moi", banMoi);
+                        cmd.Parameters.AddWithValue("@Cu", banCu);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    new SqlCommand($"UPDATE Ban SET TrangThai = N'Trong' WHERE MaBan = {banCu}", conn, trans).ExecuteNonQuery();
+                    new SqlCommand($"UPDATE Ban SET TrangThai = N'Đang phục vụ' WHERE MaBan = {banMoi}", conn, trans).ExecuteNonQuery();
+
+                    trans.Commit();
+                    return Json(new { success = true, message = "Chuyển bàn thành công!" });
+                }
+                catch (Exception ex)
+                {
+                    trans.Rollback();
+                    return Json(new { success = false, message = "Lỗi: " + ex.Message });
+                }
+            }
+        }
+
+        [HttpPost]
+        public IActionResult MergeTable(int banNguon, int banDich)
+        {
+            using (SqlConnection conn = new SqlConnection(_conn))
+            {
+                conn.Open();
+                int hdNguon = Convert.ToInt32(new SqlCommand($"SELECT MaHD FROM HoaDon WHERE MaBan = {banNguon} AND TrangThai = N'Chưa thanh toán'", conn).ExecuteScalar() ?? 0);
+                int hdDich = Convert.ToInt32(new SqlCommand($"SELECT MaHD FROM HoaDon WHERE MaBan = {banDich} AND TrangThai = N'Chưa thanh toán'", conn).ExecuteScalar() ?? 0);
+
+                if (hdNguon == 0 || hdDich == 0) return Json(new { success = false, message = "Cả 2 bàn phải đang phục vụ mới gộp được!" });
+
+                SqlTransaction trans = conn.BeginTransaction();
+                try
+                {
+                    new SqlCommand($"UPDATE ChiTietHoaDon SET MaHD = {hdDich} WHERE MaHD = {hdNguon}", conn, trans).ExecuteNonQuery();
+                    new SqlCommand($"UPDATE HoaDon SET TongTien = (SELECT ISNULL(SUM(ThanhTien), 0) FROM ChiTietHoaDon WHERE MaHD = {hdDich}) WHERE MaHD = {hdDich}", conn, trans).ExecuteNonQuery();
+                    new SqlCommand($"UPDATE HoaDon SET TrangThai = N'Đã hủy', LyDoHuy = N'Gộp hóa đơn sang Bàn {banDich}' WHERE MaHD = {hdNguon}", conn, trans).ExecuteNonQuery();
+                    new SqlCommand($"UPDATE Ban SET TrangThai = N'Trong' WHERE MaBan = {banNguon}", conn, trans).ExecuteNonQuery();
+
+                    trans.Commit();
+                    return Json(new { success = true, message = "Gộp bàn thành công!" });
+                }
+                catch (Exception ex)
+                {
+                    trans.Rollback();
+                    return Json(new { success = false, message = "Lỗi: " + ex.Message });
+                }
+            }
         }
     }
 }
