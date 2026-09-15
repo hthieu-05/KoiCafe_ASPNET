@@ -30,7 +30,6 @@
                     <td>
                         @if(db.TrangThai == "Chờ xác nhận")
                         {
-                            <!-- Mở Popup chọn bàn thay vì chạy tự động -->
                             <button class="btn btn-sm btn-primary fw-bold" onclick="openAssignModal(@db.MaDatBan, '@db.TenKhach', @db.SoNguoi)">
                                 <i class="fas fa-list-check"></i> Chọn bàn
                             </button>
@@ -38,7 +37,6 @@
                         else if (db.TrangThai == "Đã xác nhận")
                         {
                             <div class="d-flex justify-content-center gap-1">
-                                <!-- NÚT KHÁCH ĐÃ ĐẾN -->
                                 <form action="/Reservation/XacNhanKhachDen" method="post" class="d-inline">
                                     <input type="hidden" name="maDatBan" value="@db.MaDatBan" />
                                     <input type="hidden" name="hanhDong" value="DaDen" />
@@ -47,7 +45,6 @@
                                     </button>
                                 </form>
 
-                                <!-- NÚT HỦY KHI KHÁCH QUÁ GIỜ -->
                                 <form action="/Reservation/XacNhanKhachDen" method="post" class="d-inline" onsubmit="return confirm('Khách đã quá giờ? Xác nhận hủy đơn và trả bàn về trạng thái TRỐNG?');">
                                     <input type="hidden" name="maDatBan" value="@db.MaDatBan" />
                                     <input type="hidden" name="hanhDong" value="KhongDen" />
@@ -64,7 +61,6 @@
     </table>
 </div>
 
-<!-- MODAL: DANH SÁCH BÀN CHO PHÉP TÍCH CHỌN -->
 <div class="modal fade" id="assignTableModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
@@ -77,7 +73,6 @@
                 <p class="text-muted small mb-3"><i class="fas fa-info-circle"></i> Có thể chọn nhiều bàn để ghép cho đoàn đông người.</p>
                 
                 <div class="list-group">
-                    <!-- Duyệt toàn bộ danh sách bàn từ ViewBag -->
                     @foreach (var ban in ViewBag.DanhSachBan)
                     {
                         string badgeColor = ban.TrangThai == "Trong" ? "bg-success" : (ban.TrangThai == "Đã đặt" ? "bg-warning text-dark" : "bg-danger");
@@ -102,23 +97,16 @@
 </div>
 
 <script>
-    // Mở Popup và xóa các ô tích cũ
     function openAssignModal(id, ten, soNguoi) {
         document.getElementById('assignMaDatBan').value = id;
         document.getElementById('assignTenKhach').innerText = ten;
         document.getElementById('assignSoNguoi').innerText = soNguoi;
-        
-        // Bỏ tích tất cả checkbox mỗi khi mở lại modal
         document.querySelectorAll('.table-checkbox').forEach(cb => cb.checked = false);
-        
         new bootstrap.Modal(document.getElementById('assignTableModal')).show();
     }
 
-    // Thu thập các bàn được tích và gửi lên Backend
     function submitAssign() {
         let id = document.getElementById('assignMaDatBan').value;
-        
-        // Lấy tất cả các ô Checkbox đang được tích (checked), gom mã bàn lại thành chuỗi "1,2,5"
         let selectedTables = Array.from(document.querySelectorAll('.table-checkbox:checked'))
                                   .map(cb => cb.value)
                                   .join(',');

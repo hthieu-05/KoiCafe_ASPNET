@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
 using System;
-using Microsoft.Extensions.Configuration; // Thêm thư viện này cho IConfiguration
+using Microsoft.Extensions.Configuration;
 
 namespace KoiCafe.Controllers
 {
