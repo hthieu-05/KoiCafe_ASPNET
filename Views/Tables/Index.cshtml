@@ -1,0 +1,193 @@
+@model List<KoiCafe.Controllers.TableViewModel>
+@{ ViewData["Title"] = "Quản Lý Sơ Đồ Bàn"; }
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold text-dark m-0"><i class="fas fa-th-large text-primary me-2"></i> SƠ ĐỒ BÀN & SỨC CHỨA</h4>
+    <button class="btn btn-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addTableModal">
+        <i class="fas fa-plus-circle me-1"></i> THÊM BÀN
+    </button>
+</div>
+
+<div class="row g-4">
+    @foreach (var ban in Model)
+    {
+        string borderClass = ban.TrangThai == "Trong" ? "border-success" : (ban.TrangThai == "Đang phục vụ" ? "border-danger" : "border-warning");
+        string badgeClass = ban.TrangThai == "Trong" ? "bg-success" : (ban.TrangThai == "Đang phục vụ" ? "bg-danger" : "bg-warning text-dark");
+
+        <div class="col-6 col-md-4 col-lg-3">
+            <div class="card shadow-sm border-0 border-top @borderClass border-4 h-100 position-relative">
+                
+                <!-- Nút Sửa ở góc trên cùng bên phải -->
+                <button class="btn btn-sm btn-link text-secondary position-absolute top-0 end-0 mt-1 me-1" 
+                        onclick="openEditModal(@ban.MaBan, '@ban.TenBan', '@ban.KhuVuc', @ban.SucChua)" title="Sửa thông tin">
+                    <i class="fas fa-edit fs-5"></i>
+                </button>
+
+                <div class="card-body text-center p-3 mt-2">
+                    <h5 class="fw-bold mb-1">@ban.TenBan</h5>
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-map-marker-alt text-secondary"></i> @ban.KhuVuc <br/>
+                        <i class="fas fa-users text-secondary"></i> @ban.SucChua người
+                    </p>
+                    <span class="badge @badgeClass mb-3 fs-6">@ban.TrangThai</span>
+                    
+                    <div class="d-flex justify-content-center gap-2">
+                        @if (ban.TrangThai == "Trong")
+                        {
+                            <button class="btn btn-outline-danger btn-sm w-100 fw-bold" onclick="deleteTable(@ban.MaBan)">
+                                <i class="fas fa-trash-alt"></i> Xóa
+                            </button>
+                        }
+                        else if (ban.TrangThai == "Đang phục vụ")
+                        {
+                            <button class="btn btn-outline-primary btn-sm w-50 fw-bold" onclick="openMoveModal(@ban.MaBan, '@ban.TenBan')">Chuyển</button>
+                            <button class="btn btn-outline-dark btn-sm w-50 fw-bold" onclick="openMergeModal(@ban.MaBan, '@ban.TenBan')">Gộp</button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal THÊM BÀN -->
+<div class="modal fade" id="addTableModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content" action="/Tables/AddTable" method="post">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">Thêm Bàn Mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="fw-bold">Tên Bàn</label>
+                    <input type="text" name="tenBan" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-bold">Khu Vực</label>
+                    <input type="text" name="khuVuc" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-bold">Sức chứa (người)</label>
+                    <input type="number" name="sucChua" class="form-control" value="4" min="1" required>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary fw-bold w-100">Xác Nhận Tạo</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal SỬA BÀN -->
+<div class="modal fade" id="editTableModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content" action="/Tables/EditTable" method="post">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title fw-bold">Sửa Thông Tin Bàn</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" name="maBan" id="editMaBan">
+                <div class="mb-3">
+                    <label class="fw-bold">Tên Bàn</label>
+                    <input type="text" name="tenBan" id="editTenBan" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-bold">Khu Vực</label>
+                    <input type="text" name="khuVuc" id="editKhuVuc" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-bold">Sức chứa (người)</label>
+                    <input type="number" name="sucChua" id="editSucChua" class="form-control" min="1" required>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-info fw-bold w-100">Lưu Thay Đổi</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal CHUYỂN BÀN -->
+<div class="modal fade" id="moveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">Chuyển bàn: <span id="mvTenBan"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="mvBanCu">
+                <label class="fw-bold text-primary mb-2">Chọn bàn trống muốn chuyển tới:</label>
+                <select id="mvBanMoi" class="form-select form-select-lg">
+                    @foreach (var b in Model.Where(x => x.TrangThai == "Trong"))
+                    { <option value="@b.MaBan">@b.TenBan (@b.KhuVuc - @b.SucChua người)</option> }
+                </select>
+                <button class="btn btn-primary w-100 fw-bold mt-4" onclick="submitMove()">Xác Nhận Chuyển</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal GỘP BÀN -->
+<div class="modal fade" id="mergeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">Bàn <span id="mgTenBanNguon"></span> gộp sang...</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Hóa đơn sẽ được cộng dồn sang bàn đích!</div>
+                <input type="hidden" id="mgBanNguon">
+                <label class="fw-bold mb-2">Chọn bàn đích (Đang phục vụ):</label>
+                <select id="mgBanDich" class="form-select form-select-lg border-dark">
+                    @foreach (var b in Model.Where(x => x.TrangThai == "Đang phục vụ"))
+                    { <option value="@b.MaBan">@b.TenBan (@b.KhuVuc)</option> }
+                </select>
+                <button class="btn btn-dark w-100 fw-bold mt-4" onclick="submitMerge()">Xác Nhận Gộp</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Mở Modal SỬA BÀN và điền sẵn dữ liệu
+    function openEditModal(id, ten, khu, suc) {
+        document.getElementById('editMaBan').value = id;
+        document.getElementById('editTenBan').value = ten;
+        document.getElementById('editKhuVuc').value = khu;
+        document.getElementById('editSucChua').value = suc;
+        new bootstrap.Modal(document.getElementById('editTableModal')).show();
+    }
+
+    function deleteTable(id) {
+        if(!confirm("Xóa bàn này khỏi hệ thống?")) return;
+        fetch(`/Tables/DeleteTable?id=${id}`, { method: 'POST' })
+        .then(res => res.json()).then(res => { if(res.success) location.reload(); else alert(res.message); });
+    }
+
+    function openMoveModal(id, ten) {
+        document.getElementById('mvBanCu').value = id; document.getElementById('mvTenBan').innerText = ten;
+        new bootstrap.Modal(document.getElementById('moveModal')).show();
+    }
+    
+    function submitMove() {
+        let cu = document.getElementById('mvBanCu').value; let moi = document.getElementById('mvBanMoi').value;
+        if(!moi) { alert("Quán đã hết bàn trống!"); return; }
+        fetch(`/Tables/MoveTable?banCu=${cu}&banMoi=${moi}`, { method: 'POST' })
+        .then(res => res.json()).then(res => { if(res.success) location.reload(); else alert(res.message); });
+    }
+
+    function openMergeModal(id, ten) {
+        document.getElementById('mgBanNguon').value = id; document.getElementById('mgTenBanNguon').innerText = ten;
+        new bootstrap.Modal(document.getElementById('mergeModal')).show();
+    }
+
+    function submitMerge() {
+        let nguon = document.getElementById('mgBanNguon').value; let dich = document.getElementById('mgBanDich').value;
+        if(nguon === dich) { alert("Không thể gộp vào chính nó!"); return; }
+        if(!dich) { alert("Không có bàn khác đang ăn để gộp!"); return; }
+        if(!confirm("Hóa đơn sẽ gộp sang bàn đích và bàn này sẽ chuyển về Trống. Tiếp tục?")) return;
+
+        fetch(`/Tables/MergeTable?banNguon=${nguon}&banDich=${dich}`, { method: 'POST' })
+        .then(res => res.json()).then(res => { if(res.success) location.reload(); else alert(res.message); });
+    }
+</script>

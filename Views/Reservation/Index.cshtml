@@ -1,0 +1,69 @@
+@model List<KoiCafe.Controllers.DatBanViewModel>
+@{ ViewData["Title"] = "Quản Lý Đặt Bàn"; }
+
+<h4 class="fw-bold text-dark mb-4"><i class="fas fa-calendar-check text-primary me-2"></i> DANH SÁCH KHÁCH ĐẶT BÀN</h4>
+
+<div class="bg-white p-4 shadow-sm rounded">
+    <table class="table table-hover align-middle text-center">
+        <thead class="table-dark">
+            <tr>
+                <th>Mã Đơn</th><th>Khách Hàng</th><th>SĐT</th><th>Số Người</th>
+                <th>Thời Gian Đến</th><th>Bàn Cấp</th><th>Trạng Thái</th><th>Thao Tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var db in Model)
+            {
+                <tr>
+                    <td class="fw-bold">#@db.MaDatBan</td>
+                    <td class="fw-bold text-primary">@db.TenKhach</td>
+                    <td>@db.SoDienThoai</td>
+                    <td><span class="badge bg-info text-dark fs-6">@db.SoNguoi người</span></td>
+                    <td>@db.ThoiGianDat.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="fw-bold text-danger">@(string.IsNullOrEmpty(db.DanhSachMaBan) ? "Chưa xếp" : db.DanhSachMaBan)</td>
+                    <td>
+                        @if(db.TrangThai == "Chờ xác nhận") { <span class="badge bg-secondary">Chờ duyệt</span> }
+                        else if(db.TrangThai == "Đã xác nhận") { <span class="badge bg-warning text-dark">Đã xếp bàn</span> }
+                        else if(db.TrangThai == "Đã đến") { <span class="badge bg-success">Đã đến</span> }
+                        else { <span class="badge bg-danger">Không đến</span> }
+                    </td>
+                    <td>
+                        @if(db.TrangThai == "Chờ xác nhận")
+                        {
+                            <button class="btn btn-sm btn-primary fw-bold" onclick="duyetDon(@db.MaDatBan, @db.SoNguoi)">
+                                <i class="fas fa-check"></i> Xếp bàn
+                            </button>
+                        }
+                        else if (db.TrangThai == "Đã xác nhận")
+                        {
+                            <form asp-action="XacNhanKhachDen" method="post" class="d-inline">
+                                <input type="hidden" name="maDatBan" value="@db.MaDatBan" />
+                                <input type="hidden" name="hanhDong" value="DaDen" />
+                                <button type="submit" class="btn btn-sm btn-success fw-bold">
+                                    <i class="fas fa-walking"></i> Đã đến
+                                </button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function duyetDon(id, soNguoi) {
+        if(!confirm(`Xác nhận chạy thuật toán xếp bàn cho đoàn ${soNguoi} người?`)) return;
+
+        fetch(`/Reservation/DuyetDon?id=${id}&soNguoi=${soNguoi}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(res => {
+            if(res.success) {
+                alert("✅ " + res.message);
+                location.reload();
+            } else {
+                alert("❌ " + res.message);
+            }
+        });
+    }
+</script>
