@@ -1,8 +1,6 @@
 @{
-    
     Layout = null; 
 }
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -15,36 +13,34 @@
     </style>
 </head>
 <body>
-
     <div class="login-card">
         <div class="text-center mb-4">
             <h2 class="fw-bold text-warning">KOI CAFE</h2>
             <p class="text-muted">Đăng nhập vào hệ thống quản lý</p>
         </div>
 
-        <!-- Đoạn này của C# thay thế cho EJS: Kiểm tra xem có lỗi đăng nhập gửi từ Controller sang không -->
         @if (ViewBag.Error != null)
         {
-            <div class="alert alert-danger text-center fw-bold small">
+            <div class="alert alert-danger text-center fw-bold small shadow-sm">
                 @ViewBag.Error
             </div>
         }
 
-        <!-- Form gửi dữ liệu (POST) thẳng vào LoginController, hàm Index -->
         <form action="/Login/Index" method="POST">
             <div class="mb-3">
                 <label class="form-label fw-bold text-secondary">Tên đăng nhập</label>
-                <input type="text" class="form-control" name="username" placeholder="Nhập tài khoản..." required>
+                <!-- Đã có name="username" -->
+                <input type="text" class="form-control form-control-lg bg-light" name="username" placeholder="Nhập tài khoản..." required autocomplete="off">
             </div>
             <div class="mb-4">
                 <label class="form-label fw-bold text-secondary">Mật khẩu</label>
-                <input type="password" class="form-control" name="password" placeholder="Nhập mật khẩu..." required>
+                <!-- Đã có name="password" -->
+                <input type="password" class="form-control form-control-lg bg-light" name="password" placeholder="Nhập mật khẩu..." required>
             </div>
-            <button type="submit" class="btn btn-warning w-100 fw-bold fs-5 shadow-sm text-dark">
+            <button type="submit" class="btn btn-warning w-100 fw-bold fs-5 shadow-sm text-dark py-2">
                 ĐĂNG NHẬP
             </button>
         </form>
     </div>
-
 </body>
 </html>

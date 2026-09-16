@@ -1,39 +1,69 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 
 namespace KoiCafe.Controllers
 {
     public class LoginController : Controller
     {
-        private readonly string _connString;
-        public LoginController(IConfiguration config) { _connString = config.GetConnectionString("DefaultConnection"); }
+        private readonly string _conn;
+        
+        public LoginController(IConfiguration config) 
+        { 
+            _conn = config.GetConnectionString("DefaultConnection"); 
+        }
 
         [HttpGet]
-        public IActionResult Index() { return View(); }
+        public IActionResult Index()
+        {
+            // Nếu đã đăng nhập rồi thì tự động chuyển vào trong
+            var vaiTroHienTai = HttpContext.Session.GetString("VaiTro");
+            if (!string.IsNullOrEmpty(vaiTroHienTai))
+            {
+                if (vaiTroHienTai == "Nhân viên") return RedirectToAction("Index", "Pos");
+                return RedirectToAction("Index", "Dashboard");
+            }
+            return View();
+        }
 
         [HttpPost]
-        public IActionResult Index(string username, string password)
+        public IActionResult Index(string username, string password) 
         {
-            using (SqlConnection conn = new SqlConnection(_connString))
+            using (SqlConnection conn = new SqlConnection(_conn))
             {
                 conn.Open();
-                using (SqlCommand cmd = new SqlCommand("SELECT tk.*, nv.TenNV FROM TaiKhoan tk JOIN NhanVien nv ON tk.MaNV = nv.MaNV WHERE tk.TenDangNhap = @User AND tk.MatKhau = @Pass", conn))
+                string sql = "SELECT TenNV, VaiTro FROM NhanVien WHERE TenDangNhap = @user AND MatKhau = @pass";
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@User", username);
-                    cmd.Parameters.AddWithValue("@Pass", password);
-                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    // Truyền tham số để đối chiếu với Database
+                    cmd.Parameters.AddWithValue("@user", username);
+                    cmd.Parameters.AddWithValue("@pass", password);
+                    
+                    using (SqlDataReader r = cmd.ExecuteReader())
                     {
-                        if (reader.Read())
+                        if (r.Read()) // Nếu khớp tài khoản và mật khẩu
                         {
-                            HttpContext.Session.SetString("TenNV", reader["TenNV"].ToString());
-                            HttpContext.Session.SetString("VaiTro", reader["VaiTro"].ToString());
+                            string chucVu = r["VaiTro"].ToString();
                             
-                            if (reader["VaiTro"].ToString() == "Admin") return RedirectToAction("Index", "Dashboard");
-                            else return RedirectToAction("Index", "Pos");
+                            // LƯU SESSION ĐỂ HIỂN THỊ MENU PHÂN QUYỀN
+                            HttpContext.Session.SetString("TenNV", r["TenNV"].ToString());
+                            HttpContext.Session.SetString("VaiTro", chucVu);
+                            
+                            // ĐIỀU HƯỚNG THÔNG MINH
+                            if (chucVu == "Nhân viên")
+                            {
+                                return RedirectToAction("Index", "Pos"); // Nhân viên vào máy POS
+                            }
+                            else
+                            {
+                                return RedirectToAction("Index", "Dashboard"); // Quản lý/Admin vào Báo cáo
+                            }
                         }
                     }
                 }
             }
+            
+            // Nếu không khớp (sai acc/pass)
             ViewBag.Error = "Sai tài khoản hoặc mật khẩu!";
             return View();
         }
@@ -41,7 +71,7 @@ namespace KoiCafe.Controllers
         public IActionResult Logout()
         {
             HttpContext.Session.Clear();
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", "Login");
         }
     }
 }

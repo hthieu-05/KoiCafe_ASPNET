@@ -1,11 +1,13 @@
-using KoiCafe.Filters;
 using KoiCafe.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using System.Collections.Generic;
+using System;
+using Microsoft.AspNetCore.Http; // Bắt buộc thêm thư viện này để dùng Session
 
 namespace KoiCafe.Controllers
 {
-    [AdminAuth]
+    // ĐÃ XÓA BỎ THẺ [AdminAuth] Ở ĐÂY
     public class MenuController : Controller
     {
         private readonly string _conn;
@@ -14,6 +16,22 @@ namespace KoiCafe.Controllers
         [HttpGet]
         public IActionResult Index()
         {
+            // 1. KIỂM TRA PHÂN QUYỀN BẰNG SESSION
+            var vaiTro = HttpContext.Session.GetString("VaiTro");
+            
+            // Nếu chưa đăng nhập -> Đẩy ra trang Login
+            if (string.IsNullOrEmpty(vaiTro)) 
+            {
+                return RedirectToAction("Index", "Login");
+            }
+            
+            // Nếu là Nhân viên -> Không cho vào, tự động đẩy về trang Máy Bán Hàng (POS)
+            if (vaiTro == "Nhân viên") 
+            {
+                return RedirectToAction("Index", "Pos");
+            }
+
+            // 2. NẾU LÀ ADMIN HOẶC QUẢN LÝ -> CHO PHÉP ĐI TIẾP VÀ TẢI DỮ LIỆU
             var products = new List<Dictionary<string, object>>();
             var categories = new List<Dictionary<string, object>>();
 
@@ -47,13 +65,12 @@ namespace KoiCafe.Controllers
                 }
             }
             
-            // Gửi danh mục ra View thông qua ViewBag
             ViewBag.Categories = categories; 
             return View(products);
         }
 
         
-        // [GET] API: Kéo dữ liệu (Đã xóa cột MoTa)
+        // [GET] API: Kéo dữ liệu 
         [HttpGet]
         public IActionResult GetProduct(int id)
         {
@@ -93,10 +110,13 @@ namespace KoiCafe.Controllers
             }
         }
 
-        // [POST] Sửa món ăn (Đã xóa cột MoTa)
+        // [POST] Sửa món ăn 
         [HttpPost]
         public IActionResult Edit(UpdateProductRequest req)
         {
+            // Bảo mật thêm ở vòng lưu dữ liệu: Chặn Nhân viên lén gửi request sửa món
+            if (HttpContext.Session.GetString("VaiTro") == "Nhân viên") return RedirectToAction("Index", "Pos");
+
             using (SqlConnection conn = new SqlConnection(_conn))
             {
                 conn.Open();
@@ -116,10 +136,12 @@ namespace KoiCafe.Controllers
             return RedirectToAction("Index");
         }
 
-        // [POST] Thêm món ăn (Đã xóa cột MoTa để tránh lỗi khi thêm mới)
+        // [POST] Thêm món ăn
         [HttpPost]
         public IActionResult Create(CreateProductRequest req)
         {
+            if (HttpContext.Session.GetString("VaiTro") == "Nhân viên") return RedirectToAction("Index", "Pos");
+
             using (SqlConnection conn = new SqlConnection(_conn))
             {
                 conn.Open();
@@ -141,13 +163,13 @@ namespace KoiCafe.Controllers
         [HttpPost]
         public IActionResult Delete(int id)
         {
+            if (HttpContext.Session.GetString("VaiTro") == "Nhân viên") return RedirectToAction("Index", "Pos");
+
             try
             {
                 using (SqlConnection conn = new SqlConnection(_conn))
                 {
                     conn.Open();
-                    // Lưu ý: Nếu món này đã có trong Hóa đơn thì hệ thống SQL sẽ chặn không cho xóa để bảo toàn dữ liệu. 
-                    // Lúc đó bạn chỉ nên Sửa trạng thái thành "Ngừng bán".
                     using (SqlCommand cmd = new SqlCommand("DELETE FROM SanPham WHERE MaSP = @id", conn))
                     {
                         cmd.Parameters.AddWithValue("@id", id);

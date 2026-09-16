@@ -1,7 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Http
 @inject IHttpContextAccessor HttpContextAccessor
 @{
-    // Lấy chức vụ và tên của người đang đăng nhập từ Session
     var vaiTro = HttpContextAccessor.HttpContext.Session.GetString("VaiTro") ?? "";
     var tenNV = HttpContextAccessor.HttpContext.Session.GetString("TenNV") ?? "Khách";
 }
@@ -28,27 +27,26 @@
     <div class="sidebar">
         <h4 class="text-center text-warning fw-bold mb-4">☕ KOI CAFE</h4>
 
-        <!-- Hiển thị người dùng hiện tại -->
         <div class="text-center mb-3">
             <div class="badge bg-secondary mb-1">@vaiTro</div>
             <div class="text-light small">Xin chào, <b>@tenNV</b></div>
         </div>
         <hr class="text-secondary border-2 opacity-25 mx-3">
 
-        <!-- 1. CHỨC NĂNG CHUNG (Dành cho nghiệp vụ bán hàng - Nhân viên cũng thấy) -->
-        <div class="sidebar-heading">BÁN HÀNG & CSKH</div>
+        <!-- 1. QUYỀN CỦA NHÂN VIÊN (Ai cũng thấy 3 chức năng này) -->
+        <div class="sidebar-heading">BÁN HÀNG & PHỤC VỤ</div>
         <a href="/Pos"><i class="fas fa-desktop me-2"></i> Máy Bán Hàng (POS)</a>
-        <a href="/Invoice"><i class="fas fa-cash-register me-2"></i> Quản Lý Hóa Đơn</a>
+        <a href="/Tables"><i class="fas fa-th-large me-2"></i> Sơ Đồ Bàn</a>
         <a href="/Reservation"><i class="fas fa-calendar-check me-2"></i> Quản Lý Đặt Bàn</a>
-        <a href="/Orders"><i class="fas fa-file-invoice-dollar me-2"></i> Lịch Sử Đơn Hàng</a>
-        <a href="/Customer"><i class="fas fa-address-book me-2"></i> Khách Hàng (VIP)</a>
 
-        <!-- 2. CHỨC NĂNG QUẢN LÝ (Chỉ Admin và Quản lý mới thấy) -->
-        @if (vaiTro == "Admin" || vaiTro == "Quản lý")
+        <!-- 2. QUYỀN CỦA QUẢN LÝ VÀ ADMIN -->
+        @if (vaiTro == "Admin")
         {
             <div class="sidebar-heading mt-3">QUẢN LÝ CỬA HÀNG</div>
             <a href="/Dashboard"><i class="fas fa-home me-2"></i> Tổng Quan (Báo Cáo)</a>
-            <a href="/Tables"><i class="fas fa-th-large me-2"></i> Sơ Đồ Bàn</a>
+            <a href="/Invoice"><i class="fas fa-cash-register me-2"></i> Quản Lý Hóa Đơn</a>
+            <a href="/Orders"><i class="fas fa-file-invoice-dollar me-2"></i> Lịch Sử Đơn Hàng</a>
+            <a href="/Customer"><i class="fas fa-address-book me-2"></i> Khách Hàng (VIP)</a>
             <a href="/Menu"><i class="fas fa-coffee me-2"></i> Thực Đơn</a>
             <a href="/Staff"><i class="fas fa-users me-2"></i> Nhân Sự</a>
         }
@@ -57,7 +55,7 @@
         <a href="/Login/Logout" class="text-danger"><i class="fas fa-sign-out-alt me-2"></i> Đăng Xuất</a>
     </div>
 
-    <!-- Nội dung từng trang sẽ được nhúng vào đây -->
+    <!-- Nội dung -->
     <div class="content-wrapper">
         @RenderBody() 
     </div>

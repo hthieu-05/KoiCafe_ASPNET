@@ -1,11 +1,13 @@
-using KoiCafe.Filters;
 using KoiCafe.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.AspNetCore.Http; // Thêm thư viện Session
+using System.Collections.Generic;
+using System;
 
 namespace KoiCafe.Controllers
 {
-    [AdminAuth]
+    // ĐÃ XÓA [AdminAuth]
     public class InvoiceController : Controller
     {
         private readonly string _conn;
@@ -15,6 +17,11 @@ namespace KoiCafe.Controllers
         [HttpGet]
         public IActionResult Index()
         {
+            // BẢO MẬT NGẦM
+            var vaiTro = HttpContext.Session.GetString("VaiTro");
+            if (string.IsNullOrEmpty(vaiTro)) return RedirectToAction("Index", "Login");
+            if (vaiTro == "Nhân viên") return RedirectToAction("Index", "Pos"); // Đẩy nhân viên về POS
+
             var activeInvoices = new List<HoaDonModel>();
             using (SqlConnection conn = new SqlConnection(_conn))
             {
@@ -49,6 +56,10 @@ namespace KoiCafe.Controllers
         [HttpPost]
         public IActionResult ProcessInvoice([FromBody] InvoiceProcessRequest req)
         {
+            // Chặn nhân viên can thiệp qua API
+            var vaiTro = HttpContext.Session.GetString("VaiTro");
+            if (vaiTro == "Nhân viên") return Json(new { success = false, message = "Bạn không có quyền thao tác!" });
+
             string tenNV = HttpContext.Session.GetString("TenNV") ?? "Hệ thống";
 
             using (SqlConnection conn = new SqlConnection(_conn))
