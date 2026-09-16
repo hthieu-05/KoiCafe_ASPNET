@@ -1,4 +1,12 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    // Lấy chức vụ và tên của người đang đăng nhập từ Session
+    var vaiTro = HttpContextAccessor.HttpContext.Session.GetString("VaiTro") ?? "";
+    var tenNV = HttpContextAccessor.HttpContext.Session.GetString("TenNV") ?? "Khách";
+}
+
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -11,22 +19,41 @@
         .sidebar a { color: #adb5bd; text-decoration: none; padding: 12px 20px; display: block; font-weight: 500; }
         .sidebar a:hover, .sidebar a.active { background: #343a40; color: #fff; border-left: 4px solid #ffc107; }
         .content-wrapper { flex-grow: 1; padding: 20px; overflow-y: auto; }
+        .sidebar-heading { font-size: 0.75rem; color: #6c757d; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; padding: 10px 20px 5px; }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar Menu Chung -->
+    <!-- Sidebar Menu Phân Quyền -->
     <div class="sidebar">
         <h4 class="text-center text-warning fw-bold mb-4">☕ KOI CAFE</h4>
-        <a href="/Dashboard"><i class="fas fa-home me-2"></i> Tổng Quan</a>
+
+        <!-- Hiển thị người dùng hiện tại -->
+        <div class="text-center mb-3">
+            <div class="badge bg-secondary mb-1">@vaiTro</div>
+            <div class="text-light small">Xin chào, <b>@tenNV</b></div>
+        </div>
+        <hr class="text-secondary border-2 opacity-25 mx-3">
+
+        <!-- 1. CHỨC NĂNG CHUNG (Dành cho nghiệp vụ bán hàng - Nhân viên cũng thấy) -->
+        <div class="sidebar-heading">BÁN HÀNG & CSKH</div>
         <a href="/Pos"><i class="fas fa-desktop me-2"></i> Máy Bán Hàng (POS)</a>
         <a href="/Invoice"><i class="fas fa-cash-register me-2"></i> Quản Lý Hóa Đơn</a>
-        <a href="/Tables"><i class="fas fa-th-large me-2"></i> Sơ Đồ Bàn</a>
         <a href="/Reservation"><i class="fas fa-calendar-check me-2"></i> Quản Lý Đặt Bàn</a>
-        <a href="/Menu"><i class="fas fa-coffee me-2"></i> Thực Đơn</a>
         <a href="/Orders"><i class="fas fa-file-invoice-dollar me-2"></i> Lịch Sử Đơn Hàng</a>
-        <a href="/Staff"><i class="fas fa-users me-2"></i> Nhân Sự</a>
-        <hr class="text-secondary">
+        <a href="/Customer"><i class="fas fa-address-book me-2"></i> Khách Hàng (VIP)</a>
+
+        <!-- 2. CHỨC NĂNG QUẢN LÝ (Chỉ Admin và Quản lý mới thấy) -->
+        @if (vaiTro == "Admin" || vaiTro == "Quản lý")
+        {
+            <div class="sidebar-heading mt-3">QUẢN LÝ CỬA HÀNG</div>
+            <a href="/Dashboard"><i class="fas fa-home me-2"></i> Tổng Quan (Báo Cáo)</a>
+            <a href="/Tables"><i class="fas fa-th-large me-2"></i> Sơ Đồ Bàn</a>
+            <a href="/Menu"><i class="fas fa-coffee me-2"></i> Thực Đơn</a>
+            <a href="/Staff"><i class="fas fa-users me-2"></i> Nhân Sự</a>
+        }
+
+        <hr class="text-secondary border-2 opacity-25 mx-3 mt-4">
         <a href="/Login/Logout" class="text-danger"><i class="fas fa-sign-out-alt me-2"></i> Đăng Xuất</a>
     </div>
 

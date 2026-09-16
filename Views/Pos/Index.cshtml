@@ -1,7 +1,5 @@
 @model KoiCafe.Models.PosViewModel
-@{
-    Layout = null; 
-}
+@{ Layout = null; }
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -17,6 +15,7 @@
         .cart-container { background: white; height: calc(100vh - 60px); display: flex; flex-direction: column; }
         .cart-items { flex-grow: 1; overflow-y: auto; padding: 15px; }
         .products-container { height: calc(100vh - 60px); overflow-y: auto; padding: 20px; }
+        .note-input { font-size: 0.85rem; background-color: #fff8e1; border: 1px dashed #ffc107; }
     </style>
 </head>
 <body>
@@ -77,7 +76,8 @@
                             <button class="btn btn-warning w-100 fw-bold py-3 shadow-sm text-dark" onclick="processOrder('save')"><i class="fas fa-save"></i> LƯU</button>
                         </div>
                         <div class="col-5">
-                            <button class="btn btn-success w-100 fw-bold py-3 shadow-sm" onclick="processOrder('pay')"><i class="fas fa-check-circle"></i> THU TIỀN</button>
+                            <!-- Sửa nút Thu Tiền để mở Modal -->
+                            <button class="btn btn-success w-100 fw-bold py-3 shadow-sm" onclick="openPaymentModal()"><i class="fas fa-check-circle"></i> THU TIỀN</button>
                         </div>
                     </div>
                 </div>
@@ -85,15 +85,42 @@
         </div>
     </div>
 
-    <!-- SCRIPT ĐÃ ĐƯỢC CHUYỂN ĐỔI CALL API C# -->
+    <!-- MODAL THANH TOÁN (TÍCH ĐIỂM) -->
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-file-invoice-dollar me-2"></i> Xác Nhận Thanh Toán</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <h2 class="text-center text-danger fw-bold mb-4" id="modalTotalAmount">0 đ</h2>
+                    <div class="mb-3">
+                        <label class="fw-bold text-primary mb-2">Tích điểm Khách VIP (Không bắt buộc)</label>
+                        <div class="input-group">
+                            <input type="tel" id="payPhone" class="form-control" placeholder="Nhập SĐT khách hàng...">
+                            <button class="btn btn-primary fw-bold" onclick="checkVip()"><i class="fas fa-search"></i> Kiểm tra</button>
+                        </div>
+                    </div>
+                    <!-- Khu vực hiển thị kết quả kiểm tra SĐT -->
+                    <div id="vipResult" class="alert alert-info d-none mb-0"></div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button class="btn btn-success w-100 fw-bold py-2 fs-5" onclick="submitPayment()"><i class="fas fa-check"></i> HOÀN TẤT THU TIỀN</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let cart = [];
+        let paymentTotal = 0;
 
         function loadTableOrder() {
             const maBan = document.getElementById('maBan').value;
             if(!maBan) { cart = []; renderCart(); return; }
 
-            // Gọi hàm C#
             fetch('/Pos/GetTableOrder/' + maBan)
                 .then(res => res.json())
                 .then(data => {
@@ -103,8 +130,9 @@
         }
 
         function addToCart(maSP, tenSP, donGia) {
-            let item = cart.find(i => i.maSP == maSP);
-            if(item) item.soLuong++; else cart.push({maSP, tenSP, donGia, soLuong: 1});
+            let item = cart.find(i => i.maSP == maSP && (i.ghiChu == "" || !i.ghiChu));
+            if(item) item.soLuong++; 
+            else cart.push({maSP, tenSP, donGia, soLuong: 1, ghiChu: ''});
             renderCart();
         }
 
@@ -114,41 +142,96 @@
             renderCart();
         }
 
+        // Cập nhật giá trị ô text Ghi Chú vào mảng cart
+        function updateNote(index, value) {
+            cart[index].ghiChu = value;
+        }
+
         function renderCart() {
-            let html = ''; let total = 0;
+            let html = ''; paymentTotal = 0;
             if(cart.length === 0) {
                 html = '<div class="text-center text-muted mt-5"><i class="fas fa-receipt fs-1 mb-3"></i><br>Chưa có món nào</div>';
             } else {
                 cart.forEach((item, i) => {
-                    total += item.donGia * item.soLuong;
+                    paymentTotal += item.donGia * item.soLuong;
                     html += `
-                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded bg-white shadow-sm">
-                        <div style="flex: 1;"><div class="fw-bold">${item.tenSP}</div><div class="text-danger small fw-bold">${item.donGia.toLocaleString('vi-VN')} đ</div></div>
-                        <div class="d-flex align-items-center">
-                            <button class="btn btn-sm btn-outline-secondary px-2 fw-bold" onclick="changeQty(${i}, -1)">-</button>
-                            <span class="mx-2 fw-bold fs-5">${item.soLuong}</span>
-                            <button class="btn btn-sm btn-outline-secondary px-2 fw-bold" onclick="changeQty(${i}, 1)">+</button>
+                    <div class="mb-2 p-2 border rounded bg-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div style="flex: 1;"><div class="fw-bold">${item.tenSP}</div><div class="text-danger small fw-bold">${item.donGia.toLocaleString('vi-VN')} đ</div></div>
+                            <div class="d-flex align-items-center">
+                                <button class="btn btn-sm btn-outline-secondary px-2 fw-bold" onclick="changeQty(${i}, -1)">-</button>
+                                <span class="mx-2 fw-bold fs-5">${item.soLuong}</span>
+                                <button class="btn btn-sm btn-outline-secondary px-2 fw-bold" onclick="changeQty(${i}, 1)">+</button>
+                            </div>
                         </div>
+                        <!-- Ô NHẬP GHI CHÚ -->
+                        <input type="text" class="form-control form-control-sm note-input" placeholder="✍️ Ghi chú (Ví dụ: Ít đá, nhiều sữa...)" value="${item.ghiChu || ''}" onchange="updateNote(${i}, this.value)">
                     </div>`;
                 });
             }
             document.getElementById('cartItems').innerHTML = html;
-            document.getElementById('cartTotal').innerText = total.toLocaleString('vi-VN') + ' đ';
+            document.getElementById('cartTotal').innerText = paymentTotal.toLocaleString('vi-VN') + ' đ';
         }
 
+        // Mở Modal Thanh Toán
+        function openPaymentModal() {
+            if(!document.getElementById('maBan').value) return alert('Vui lòng chọn Bàn trước!');
+            if(cart.length === 0) return alert('Chưa có món nào để thu tiền!');
+            
+            document.getElementById('modalTotalAmount').innerText = paymentTotal.toLocaleString('vi-VN') + ' đ';
+            document.getElementById('payPhone').value = '';
+            document.getElementById('vipResult').classList.add('d-none');
+            
+            new bootstrap.Modal(document.getElementById('paymentModal')).show();
+        }
+
+        // Gọi API kiểm tra Khách hàng
+        function checkVip() {
+            let sdt = document.getElementById('payPhone').value.trim();
+            if(!sdt) return alert("Vui lòng nhập số điện thoại");
+
+            fetch('/Customer/CheckPhone?sdt=' + sdt)
+            .then(res => res.json())
+            .then(res => {
+                let div = document.getElementById('vipResult');
+                div.classList.remove('d-none', 'alert-info', 'alert-danger');
+                
+                if(res.success) {
+                    div.classList.add('alert-info');
+                    // Hiển thị dự kiến số điểm được cộng (Tổng tiền / 10000)
+                    let diemDuKien = Math.floor(paymentTotal / 10000);
+                    div.innerHTML = `<strong>👤 ${res.data.hoTen}</strong> (Đang có: ${res.data.diemTichLuy} điểm) <br> <span class="text-success"><i class="fas fa-arrow-up"></i> Sẽ được cộng thêm <b>${diemDuKien}</b> điểm.</span>`;
+                } else {
+                    div.classList.add('alert-danger');
+                    div.innerHTML = `❌ Không tìm thấy SĐT này. Vui lòng đăng ký khách mới trong trang Quản lý.`;
+                }
+            });
+        }
+
+        // Submit LƯU (Không thanh toán)
         function processOrder(action) {
             let maBan = document.getElementById('maBan').value;
             if(!maBan) return alert('Vui lòng chọn Bàn trước!');
-            if(cart.length === 0 && action !== 'cancel') return alert('Chưa có món nào!');
-            if(action === 'pay' && !confirm('Xác nhận thu tiền?')) return;
+            if(cart.length === 0) return alert('Chưa có món nào!');
 
-            // Truyền lên C# PosController/ProcessOrder
             fetch('/Pos/ProcessOrder', {
                 method: 'POST', headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ maBan: parseInt(maBan), action: action, cart: cart })
+                body: JSON.stringify({ maBan: parseInt(maBan), action: action, sdtKhach: "", cart: cart })
             }).then(r => r.json()).then(res => {
-                if(res.success) { alert(res.message); location.reload(); } 
-                else alert('Lỗi: ' + res.message);
+                if(res.success) { alert(res.message); location.reload(); } else alert('Lỗi: ' + res.message);
+            });
+        }
+
+        // Submit THANH TOÁN (Trong Modal)
+        function submitPayment() {
+            let maBan = document.getElementById('maBan').value;
+            let sdt = document.getElementById('payPhone').value.trim();
+
+            fetch('/Pos/ProcessOrder', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ maBan: parseInt(maBan), action: 'pay', sdtKhach: sdt, cart: cart })
+            }).then(r => r.json()).then(res => {
+                if(res.success) { alert(res.message); location.reload(); } else alert('Lỗi: ' + res.message);
             });
         }
 

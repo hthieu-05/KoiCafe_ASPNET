@@ -1,0 +1,81 @@
+@model List<KoiCafe.Controllers.KhachHangModel>
+@{ ViewData["Title"] = "Quản Lý Khách Hàng"; }
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold text-dark m-0"><i class="fas fa-address-book text-primary me-2"></i> DANH SÁCH KHÁCH HÀNG</h4>
+    <button class="btn btn-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+        <i class="fas fa-user-plus me-1"></i> THÊM KHÁCH HÀNG
+    </button>
+</div>
+
+<!-- Cảnh báo lỗi/thành công -->
+@if (TempData["Error"] != null) { <div class="alert alert-danger">@TempData["Error"]</div> }
+@if (TempData["Success"] != null) { <div class="alert alert-success">@TempData["Success"]</div> }
+
+<!-- Thanh tìm kiếm -->
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-body">
+        <form action="/Customer/Index" method="get" class="d-flex gap-2">
+            <input type="text" name="searchQuery" value="@ViewBag.SearchQuery" class="form-control" placeholder="🔍 Nhập số điện thoại hoặc tên khách hàng để tìm kiếm...">
+            <button type="submit" class="btn btn-dark fw-bold px-4">TÌM KIẾM</button>
+            <a href="/Customer" class="btn btn-outline-secondary">Xóa lọc</a>
+        </form>
+    </div>
+</div>
+
+<!-- Bảng danh sách -->
+<div class="bg-white p-0 shadow-sm rounded overflow-hidden">
+    <table class="table table-hover align-middle text-center m-0">
+        <thead class="table-dark">
+            <tr>
+                <th>Mã KH</th>
+                <th>Họ Tên</th>
+                <th>Số Điện Thoại</th>
+                <th>Điểm Tích Lũy</th>
+                <th>Ngày Đăng Ký</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if(Model.Count == 0) { <tr><td colspan="5" class="text-muted p-4">Không tìm thấy khách hàng nào.</td></tr> }
+            @foreach (var kh in Model)
+            {
+                <tr>
+                    <td class="fw-bold text-secondary">#@kh.MaKH</td>
+                    <td class="fw-bold text-primary">@kh.HoTen</td>
+                    <td class="fw-bold">@kh.SDT</td>
+                    <td>
+                        <span class="badge rounded-pill bg-warning text-dark fs-6 px-3">
+                            <i class="fas fa-star text-danger me-1"></i> @kh.DiemTichLuy điểm
+                        </span>
+                    </td>
+                    <td>@kh.NgayDangKy.ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Thêm Khách Hàng -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content" action="/Customer/AddCustomer" method="post">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">Thêm Khách Hàng Mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="fw-bold mb-1">Họ và Tên</label>
+                    <input type="text" name="hoTen" class="form-control form-control-lg" required>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-bold mb-1">Số Điện Thoại</label>
+                    <input type="tel" name="sdt" class="form-control form-control-lg" pattern="[0-9]{10,11}" title="Vui lòng nhập 10-11 số" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary fw-bold w-100 py-2">LƯU KHÁCH HÀNG</button>
+            </div>
+        </form>
+    </div>
+</div>
